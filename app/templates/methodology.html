@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Goals</h2>
+<p>
+    The goal of the project is to provide a real-time, ballpark estimate of the likelihood of victory for any given fleaflicker team. Yahoo Fantasy Sports is the inspiration for the design as they have this live update tool built into their website.
+</p>
+
+<h2>Getting Forecasts for Individual Players</h2>
+<p>
+    Individual player forecasts are huge pain to assemble algorithmically. This is because historical performance has very little to do with future results.
+    <ul>
+    <li>A backup player that was outstanding for the last 3 weeks might see a reduced role when the starter returns from injury. </li>
+    <li>Defensive assignments might change after the league realizes the player is effective</li>
+    <li>Weather conditions might render an effective kicker less effective</li>
+    <li>The referees for a game might be more aggressive about calling pass interference.</li>
+    <li>A team might bench a player for an off-the-field dispute</li>
+    </ul>
+    As a design decision, I've decided not to generate these predictions myself for the reasons listed above. Fortunately, we have an readily available alternative: expert predictions.
+</p>
+<p>  Sports media companies hire a variety of experts to make predictions. While these predictions are not perfectly accurate, they serve as a good ballpark estimate. Fleaflicker.com provides point projections in their API for each player according to the league scoring rules. These projections are updated continuously until kickoff, and generally capture any late breaking news.</p>
+
+<h2>Generating Probability Distributions for Individual Players</h2>
+<p>
+Now the challenge is to account for the inherent randomness in football, as well as unskilled "experts" making projections. Most experts don't like publishing their predictions from past years for fear that they might look bad. ESPN was the only site that offered historical projection data that could be readily fact-checked against actual scores. I took the average error in their prediction and found that normal distribution for each position fit the data well. Now we have a probability distribution for each player based on the position they play and their initial projection.
+</p>
+
+<h2>Updating Probability Distributions in Real Time</h2>
+<p>
+    Once we have a probability distribution for each player, we're now tasked with updating it in real time. Fleaflicker does not update the forecasts past kickoff. As a simplifying assumption we assume that each player will score their points uniformly throughout the game every second. We'll generate our real time projections for an individual player with the following formula: <b>[projected score] = [points already scored] + [seconds remaining]*[pregame points-per-second estimate]</b>. We'll also assume the standard deviation of the points scored scales down linearly with the percent time remaining in the game
+</p>
+<p>This has some pros and cons</p>
+<p><b>Pros:</b>
+<ul>
+    <li>If a player scores a touchdown on the first play of the game, the projection doesn't overreact and start assuming they score a touchdown every play.</li>
+    <li>At the halfway mark, a player's score is equal parts projection and performance. This is intuitively appealing.</li>
+    <li>The projection gradually every second that goes by without the player scoring, but experiences a small discrete jump every time the player scores</li>
+    <li>The normal distribution assumption allows us some computational tractability when combining player estimates into a team estimate</li>
+</ul>
+<b>Cons:</b>
+<ul>
+    <li>The system doesn't handle injuries well. If a player twists his ankle on the first play and cannot return to the game, the projection has no way to take this into account</li>
+    <li>The system doesn't take the game script into account. Players generally only score when their team has the ball. Teams run the ball and play more conservatively when ahead</li>
+    <li>While the beginning and middle of the game are well modeled, the last few plays are subject to more extreme errors. Ex: If there is 1 second on the clock, and the team with the ball is down by 5, you can assume they are going to select an aggressive passing play. The receivers have a higher chance of suddenly scoring a touchdown than the algorithm would predict</li>
+    <li>In reality player projections have fatter tails than a normal distribution would suggest. A player is more likely to find 4 lucky TDs than a normal distribution would suggest.</li>
+    <li>DST scoring is not linear. Teams get points by preventing yards and scores by their opponents. Thus points scored in the first half are often lost in the second half. I account for this by assuming that the DST scoring will be a weighted average of the actual score and the pre-game projected score. This allows for some mean reversion.</li>
+</ul>
+Empirically we find that these factors generally balance out in the end and the individual projections are a reasonable ballpark estimate.
+</p>
+
+<h2>Combining Player Score Probability Distributions into Team Win Probabilities</h2>
+<p>
+    Once each player has a normal probability distribution, we can easily generate the team score estimates using the fact that a sum of normal distributions is itself normal. Thus we add the means and variances of the probability distributions to get the probability distribution for the team.
+</p>
+<p>
+    Once we have each team's scoring distribution, we generate a distribution of the "home" team's score - "away" team's score. This distribution represents the margin of victory of the home team. (A negative margin of victory represents a margin of defeat). With some basic statistics, we can measure the probability that this margin of victory is positive, and this gives us the home and away team victory probabilities.
+</p>
+
+<h2>Limitations</h2>
+<p>
+<ul>
+    <li>The model is over-ambitious around the tails of the probability distribution. This has mainly to do with injuries, low-time situations, and fat-tails on the player projections</li>
+    <li>The model doesn't tell you any secrets you shouldn't already know from the experts projections: It doesn't identify underrated players, or offer you smarter betting lines than Vegas. </li>
+    <li>The error of ESPN forecasters is being assumed for Fleaflicker forecasters in the absence of Fleaflicker making it's historical projections available </li>
+</ul>
+Still, the algorithm does a good job of giving a rough estimate when fantasy owners are panicking going into the Monday night games. It can quickly and accurately answer questions like "I've got 2 more players than my opponent, but he has a 30 point lead. Who is better off?" and "I just scored a 40yd touchdown, how much does that help my chances?"
+</p>
+
+{% endblock %}
