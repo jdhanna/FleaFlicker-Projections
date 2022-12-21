@@ -149,14 +149,15 @@ class player:
         self.data = playerJson
 
     def updateActiveScore(self):
-        if "viewingActualPoints" in self.data["leaguePlayer"]:
-            if "value" in self.data["leaguePlayer"]["viewingActualPoints"]:
-                self.pointsScored = self.data["leaguePlayer"]["viewingActualPoints"]["value"]
-            else:
-                if self.data["leaguePlayer"]["viewingActualPoints"]["formatted"] == "—":
-                    self.pointsScored = 0
+        if "leaguePlayer" in self.data:
+            if "viewingActualPoints" in self.data["leaguePlayer"]:
+                if "value" in self.data["leaguePlayer"]["viewingActualPoints"]:
+                    self.pointsScored = self.data["leaguePlayer"]["viewingActualPoints"]["value"]
                 else:
-                    self.pointsScored = int(self.data["leaguePlayer"]["viewingActualPoints"]["formatted"])
+                    if self.data["leaguePlayer"]["viewingActualPoints"]["formatted"] == "—":
+                        self.pointsScored = 0
+                    else:
+                        self.pointsScored = int(self.data["leaguePlayer"]["viewingActualPoints"]["formatted"])
 
     def updateProjection(self, method="simpleLinear"):
         # FleaFlicker is the default method
