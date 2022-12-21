@@ -135,18 +135,30 @@ class player:
     # teamObject is run from earlier as well: requests.get("https://www.fleaflicker.com/api/FetchRoster", params={"sport": "NFL", "league_id": leagueId, "team_id": teamId})
 
     def importPlayer(self, playerJson):
-        self.name = playerJson["leaguePlayer"]["proPlayer"]["nameFull"]
-        self.ID = playerJson["leaguePlayer"]["proPlayer"]["id"]
-        self.position = playerJson["leaguePlayer"]["proPlayer"]["position"]
-        self.teamNFL = playerJson["leaguePlayer"]["proPlayer"]["proTeam"]["abbreviation"]
-        self.projection = 0  # This is the fancier projection that will be updated in real time and used to calculate victory likelihood
-        self.projectionFF = 0
-        if "viewingProjectedPoints" in playerJson["leaguePlayer"]:
-            self.projectionFF = playerJson["leaguePlayer"]["viewingProjectedPoints"][
-                "value"]  # This is the projection that fleaflicker publishes.
-        self.pointRate = self.projectionFF / 3600
-        self.pointsScored = 0
-        self.data = playerJson
+        if "leaguePlayer" not in playerJson.keys():
+            self.name = "N/A"
+            self.ID="N/A"
+            self.position="QB"
+            self.teamNFL="N/A"
+            self.projection=0
+            self.projectionFF = 0
+            self.pointRate = 0
+            self.pointsScored = 0
+            self.data = playerJson
+            return
+        else:
+            self.name = playerJson["leaguePlayer"]["proPlayer"]["nameFull"]
+            self.ID = playerJson["leaguePlayer"]["proPlayer"]["id"]
+            self.position = playerJson["leaguePlayer"]["proPlayer"]["position"]
+            self.teamNFL = playerJson["leaguePlayer"]["proPlayer"]["proTeam"]["abbreviation"]
+            self.projection = 0  # This is the fancier projection that will be updated in real time and used to calculate victory likelihood
+            self.projectionFF = 0
+            if "viewingProjectedPoints" in playerJson["leaguePlayer"]:
+                self.projectionFF = playerJson["leaguePlayer"]["viewingProjectedPoints"][
+                    "value"]  # This is the projection that fleaflicker publishes.
+            self.pointRate = self.projectionFF / 3600
+            self.pointsScored = 0
+            self.data = playerJson
 
     def updateActiveScore(self):
         if "leaguePlayer" in self.data:
