@@ -1,1 +1,1 @@
-web: flask translate compile; gunicorn projections:app
+web: gunicorn projections:app
